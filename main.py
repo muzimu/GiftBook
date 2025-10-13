@@ -1,6 +1,8 @@
 from pathlib import Path
 from openai import OpenAI
 from os import getenv
+from dotenv import load_dotenv
+load_dotenv()
 
 client = OpenAI(
     api_key = getenv('api_key'),
@@ -8,7 +10,7 @@ client = OpenAI(
 )
 
 def recognize():
-    file_object = client.files.create(file=Path(r"D:\workspace\python\GiftBook\image\lzj-1.jpg"), purpose="file-extract")
+    file_object = client.files.create(file=Path("image/lzj-1.jpg"), purpose="file-extract")
     file_content = client.files.content(file_id=file_object.id).text
     # 把它放进请求中
     messages = [
