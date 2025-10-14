@@ -2,7 +2,7 @@ import os
 import glob
 from pathlib import Path
 
-def rename_jpg_files(directory="D:\workspace\python\GiftBook\image"):
+def rename_jpg_files(directory="image"):
     """
     将指定目录下的所有jpg图片重命名为lzj-1.jpg, lzj-2.jpg等格式
     按照原文件名排序
