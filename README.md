@@ -10,9 +10,10 @@ base_url = "https://api.moonshot.cn/v1"
 
 # How to build uv environment
 
+> uv官方安装教程 https://docs.astral.sh/uv/getting-started/installation/
+
 ```bash
-pip install --upgrade pip -i https://mirrors.aliyun.com/pypi/simple
-pip install uv -i https://mirrors.aliyun.com/pypi/simple
+curl -LsSf https://astral.sh/uv/install.sh | sh
 uv sync
 uv run main.py
 ```
