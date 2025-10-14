@@ -7,3 +7,12 @@
 api_key = "API-KEY"
 base_url = "https://api.moonshot.cn/v1"
 ```
+
+# How to build uv environment
+
+```bash
+pip install --upgrade pip -i https://mirrors.aliyun.com/pypi/simple
+pip install uv -i https://mirrors.aliyun.com/pypi/simple
+uv sync
+uv run main.py
+```
