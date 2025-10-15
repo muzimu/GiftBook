@@ -13,6 +13,6 @@ s3 = boto3.client('s3',
 def upload_file(file_path: str):
     file_name = file_path.split("/")[-1]
     with open(file_path, 'rb') as f:
-        s3.put_object(Bucket='muzimu', Key='GiftBook/' + file_name, Body=f)
+        s3.put_object(Bucket='muzimu', Key='GiftBook/' + file_name, Body=f, IfNoneMatch='*')
         
 # upload_file('image/lzj-1.jpg')
