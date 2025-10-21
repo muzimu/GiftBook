@@ -8,11 +8,8 @@ dependencies = [
     "boto3>=1.40.51",
     "openai>=2.1.0",
     "python-dotenv>=1.1.1",
+    "streamlit>=1.50.0",
 ]
 
 [[tool.uv.index]]
 url = "https://mirrors.aliyun.com/pypi/simple"
-default = true
-
-[[tool.uv.index]]
-url = "https://pypi.org/simple"
