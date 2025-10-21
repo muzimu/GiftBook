@@ -1,6 +1,7 @@
 import os
 import glob
 from pathlib import Path
+import re
 
 def rename_jpg_files(directory="image"):
     """
@@ -13,8 +14,13 @@ def rename_jpg_files(directory="image"):
                 glob.glob(os.path.join(directory, "*.jpeg")) + \
                 glob.glob(os.path.join(directory, "*.JPEG"))
     
+    def sort_key(filename):
+        # 提取文件名中的所有数字，组成列表（用于排序）
+        numbers = re.findall(r'\d+', filename)
+        return [int(num) for num in numbers], filename  # 先按数字排序，再按文件名排序
+    
     # 按文件名排序
-    jpg_files.sort()
+    jpg_files = sorted(jpg_files, key=sort_key)
     
     print(f"找到 {len(jpg_files)} 个jpg文件")
     
