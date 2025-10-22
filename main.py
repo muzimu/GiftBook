@@ -1,5 +1,5 @@
 import re
-import main as st
+import streamlit as st
 import pandas as pd
 import os
 import json
