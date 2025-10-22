@@ -62,22 +62,23 @@ def append_gifts_to_csv(gifts_df, csv_file='output/template.csv'):
             writer.writeheader()
         
         for gift in gifts:
-            row = {
-                '时间': datetime.now().strftime("%Y/%m/%d"),
-                '分类': '礼金',
-                '二级分类': '',
-                '类型': '收入',
-                '金额': gift['value'],
-                '账户1': '',
-                '账户2': '',
-                '备注': f'{gift["name"]} {gift["remark"]}',
-                '账单标记': '',
-                '手续费': '',
-                '优惠券': '',
-                '标签': '',
-                '账单图片': gift['img']
-            }
-            writer.writerow(row)
+            if gift['value'] > 0:
+                row = {
+                    '时间': "2021/6/18",
+                    '分类': '礼金',
+                    '二级分类': '',
+                    '类型': '收入',
+                    '金额': gift['value'],
+                    '账户1': '',
+                    '账户2': '',
+                    '备注': f'{gift["name"]} {gift["remark"]}',
+                    '账单标记': '',
+                    '手续费': '',
+                    '优惠券': '',
+                    '标签': '',
+                    '账单图片': gift['img']
+                }
+                writer.writerow(row)
     return True
 
 def get_image_files():
@@ -292,13 +293,9 @@ def main():
                     img_url = f"http://t44p80tuo.hd-bkt.clouddn.com/GiftBook/{img_file}"
                     
                     if not check_url_accessibility(img_url):
-                        st.warning(f"{img_file} URL不可访问，尝试重新上传...")
                         img_url = s3.upload_file(img_path)
-                        if img_url:
-                            check_url_accessibility.clear(img_url)  # 清除缓存
-                            st.rerun()
-                        if not img_url or not check_url_accessibility(img_url):
-                            st.error(f"{img_file} 无法访问，跳过处理")
+                        if not img_url:
+                            st.error(f"{img_file} 上传失败，跳过处理")
                             continue
                     
                     gifts = recognize(img_path, img_url)
