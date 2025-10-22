@@ -13,6 +13,8 @@ wheels/
 image/
 output/
 .env
+processed_data/
+processed_status.json
 
 # MacOS files
 .DS_Store
