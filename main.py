@@ -18,18 +18,25 @@ os.makedirs('output', exist_ok=True)
 os.makedirs('image', exist_ok=True)
 os.makedirs('processed_data', exist_ok=True)
 
-# 加载处理状态记录
+# 加载处理状态记录（新增audit_status：pending/approved/rejected）
 def load_processed_status():
     if os.path.exists('processed_status.json'):
         with open('processed_status.json', 'r', encoding='utf-8') as f:
-            return json.load(f)
+            status_dict = json.load(f)
+            # 兼容旧版本数据（旧数据只有布尔值，新增审核状态默认"待审核"）
+            for img_name, value in status_dict.items():
+                if isinstance(value, bool):
+                    status_dict[img_name] = {
+                        "processed": value,
+                        "audit_status": "pending"  # pending=待审核, approved=已通过, rejected=已驳回
+                    }
+            return status_dict
     return {}
 
-# 保存处理状态记录
+# 保存处理状态记录（包含审核状态）
 def save_processed_status(status):
     with open('processed_status.json', 'w', encoding='utf-8') as f:
         json.dump(status, f, ensure_ascii=False, indent=2)
-
 # 加载单张图片的处理数据
 def load_image_data(image_name):
     file_path = f'processed_data/{image_name}.json'
@@ -163,16 +170,48 @@ def main():
     if st.sidebar.button("刷新访问状态"):
         check_url_accessibility.clear()
         st.rerun()
+    
+    audit_map = {
+        "pending": "🟡待审核",
+        "approved": "🟢已通过",
+        "rejected": "🔴已驳回"
+    }
+    
     for img in image_files:
-        status = "✅ 已处理" if processed_status.get(img, False) else "❌ 未处理"
+        status = "✅已处理" if processed_status.get(img, False) else "❌未处理"
         
         # 从缓存获取URL状态（首次请求会实际检查，后续直接用缓存）
         img_url = f"http://t44p80tuo.hd-bkt.clouddn.com/GiftBook/{img}"
-        url_status = "🟢 可访问" if check_url_accessibility(img_url) else "🔴 不可访问"
+        url_status = "🟢可访问" if check_url_accessibility(img_url) else "🔴不可访问"
+        img_status = processed_status.get(img, {"processed": False, "audit_status": "pending"})
+        audit_tag = audit_map[img_status["audit_status"]]
         
-        if st.sidebar.button(f"{img}: {status} ({url_status})", key=img):
-            st.session_state.selected_image = img
-            st.rerun()
+        # 4. 图片选择按钮（显示完整状态）
+        col_btn, col_audit = st.sidebar.columns([3, 2])  # 分栏：按钮+审核下拉框
+        with col_btn:
+            if st.button(f"{img}: {status} | {audit_tag} | {url_status}", key=f"btn_{img}"):
+                st.session_state.selected_image = img
+                st.rerun()
+        
+        # 5. 审核状态切换下拉框（实时保存）
+        with col_audit:
+            status_map = {
+                "待审核": "pending",
+                "已通过": "approved",
+                "已驳回": "rejected"
+            }
+            new_audit_status = st.selectbox(
+                "审核状态",
+                options=["待审核", "已通过", "已驳回"],
+                index=["pending", "approved", "rejected"].index(img_status["audit_status"]),
+                key=f"audit_{img}",
+                label_visibility="collapsed"  # 隐藏标签，节省空间
+            )
+            # 若审核状态变更，立即保存
+            if status_map[new_audit_status] != img_status["audit_status"]:
+                processed_status[img]["audit_status"] = status_map[new_audit_status]
+                save_processed_status(processed_status)
+                st.rerun()  # 刷新界面显示最新状态
     
     # 显示当前选中的图片
     selected_image = st.session_state.selected_image
