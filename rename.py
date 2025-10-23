@@ -9,10 +9,7 @@ def rename_jpg_files(directory="image"):
     按照原文件名排序
     """
     # 获取目录下所有的jpg文件（包括.JPG等大小写变体）
-    jpg_files = glob.glob(os.path.join(directory, "*.jpg")) + \
-                glob.glob(os.path.join(directory, "*.JPG")) + \
-                glob.glob(os.path.join(directory, "*.jpeg")) + \
-                glob.glob(os.path.join(directory, "*.JPEG"))
+    jpg_files = glob.glob(os.path.join(directory, "*.jpg"))
     
     def sort_key(filename):
         # 提取文件名中的所有数字，组成列表（用于排序）
