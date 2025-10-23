@@ -52,40 +52,70 @@ def save_image_data(image_name, df):
     data = df.to_dict('records')
     with open(file_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+        
+def get_all_recognized_data(image_files, processed_status):
+    """按图片顺序整合所有已处理图片的识别结果"""
+    all_data = []
+    # 遍历所有图片，只处理已完成识别的
+    for img in image_files:
+        # 跳过未处理或无保存数据的图片
+        if not processed_status.get(img, {}).get("processed", False):
+            continue
+        img_data = load_image_data(img)
+        if img_data is None or img_data.empty:
+            continue
+        # 为每条数据添加图片名称（便于追溯）
+        img_data["图片名称"] = img
+        all_data.append(img_data)
+    # 合并所有数据（保持图片顺序）
+    if all_data:
+        return pd.concat(all_data, ignore_index=True)
+    return pd.DataFrame()  # 无数据时返回空DataFrame
 
-def append_gifts_to_csv(gifts_df, csv_file='output/template.csv'):
+def export_to_csv(df, export_type="single", file_name_prefix="GiftBook"):
+    """
+    导出数据到CSV
+    - export_type: "single"（单张）/ "batch"（批量）
+    - file_name_prefix: 导出文件名前缀
+    """
     import csv
-    gifts = gifts_df.to_dict('records')
+    csv_file = f'output/{file_name_prefix}_{datetime.now().strftime("%Y%m%d%H%M%S")}.csv'
+    fieldnames = [
+        '时间', '分类', '二级分类', '类型', '金额', 
+        '账户1', '账户2', '备注', '账单标记', 
+        '手续费', '优惠券', '标签', '账单图片'
+    ]
     
-    with open(csv_file, 'a', newline='', encoding='utf-8') as f:
-        fieldnames = [
-            '时间', '分类', '二级分类', '类型', '金额', 
-            '账户1', '账户2', '备注', '账单标记', 
-            '手续费', '优惠券', '标签', '账单图片'
-        ]
-        
+    # 过滤金额>0的数据（礼金为收入）
+    df_valid = df[df['value'] > 0].copy()
+    
+    with open(csv_file, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
-        if os.path.getsize(csv_file) == 0:
-            writer.writeheader()
+        writer.writeheader()
         
-        for gift in gifts:
-            if gift['value'] > 0:
-                row = {
-                    '时间': "2021/6/18",
-                    '分类': '礼金',
-                    '二级分类': '',
-                    '类型': '收入',
-                    '金额': gift['value'],
-                    '账户1': '',
-                    '账户2': '',
-                    '备注': f'{gift["name"]} {gift["remark"]}',
-                    '账单标记': '',
-                    '手续费': '',
-                    '优惠券': '',
-                    '标签': '',
-                    '账单图片': gift['img']
-                }
-                writer.writerow(row)
+        for _, gift in df_valid.iterrows():
+            row = {
+                '时间': "2021/6/18",  # 可根据实际需求修改默认时间
+                '分类': '礼金',
+                '二级分类': '',
+                '类型': '收入',
+                '金额': gift['value'],
+                '账户1': '',
+                '账户2': '',
+                '备注': f'{gift["name"]} {gift["remark"]}',
+                '账单标记': '',
+                '手续费': '',
+                '优惠券': '',
+                '标签': '',
+                '账单图片': gift.get('img', ''),
+            }
+            writer.writerow(row)
+    
+    return csv_file  # 返回生成的文件路径
+
+def append_gifts_to_csv(gifts_df, file_name = "single_file"):
+    # 调用统一导出函数，类型设为"single"
+    export_file = export_to_csv(gifts_df, export_type="single", file_name_prefix=file_name)
     return True
 
 def get_image_files():
@@ -230,6 +260,36 @@ def main():
                 del st.session_state[key]
         st.session_state['last_selected_image'] = selected_image
         st.session_state['manual_rotation'] = 0
+        
+        st.sidebar.subheader("批量导出")
+    # 统计已处理的图片数量（用于提示）
+    processed_count = sum(1 for img in image_files if processed_status.get(img, {}).get("processed", False))
+    st.sidebar.text(f"已处理图片: {processed_count}张")
+    
+    if st.sidebar.button(f"一键导出所有{processed_count}张结果到CSV"):
+        if processed_count > 0:
+            with st.spinner("正在整合所有识别结果..."):
+                # 1. 整合所有已处理数据
+                all_data = get_all_recognized_data(image_files, processed_status)
+                if all_data.empty:
+                    st.error("未找到有效识别结果（可能所有已处理图片无礼金数据）")
+                    return
+                
+                # 2. 导出到CSV
+                csv_file = export_to_csv(all_data)
+                
+                # 3. 提供下载按钮
+                st.success(f"✅ 所有结果已导出！共 {len(all_data)} 条礼金记录")
+                with open(csv_file, 'rb') as f:
+                    st.download_button(
+                        label="📥 下载批量导出的CSV文件",
+                        data=f,
+                        file_name=os.path.basename(csv_file),
+                        mime='text/csv'
+                    )
+        elif processed_count == 0:
+            st.warning("⚠️ 暂无已处理图片，无法批量导出")
+
     
     # 显示选中的图片及操作
     if selected_image:
@@ -378,17 +438,9 @@ def main():
             with st.spinner("正在导出数据..."):
                 try:
                     df_to_export = edited_df if 'edited_df' in st.session_state else st.session_state['gifts_df']
-                    result = append_gifts_to_csv(df_to_export)
-                    if result:
-                        st.success("数据已成功导出到CSV文件")
-                        
-                        with open('output/template.csv', 'rb') as f:
-                            st.download_button(
-                                label="下载CSV文件",
-                                data=f,
-                                file_name='gift_records.csv',
-                                mime='text/csv'
-                            )
+                    file_name = f'{current_img}'
+                    file_name = file_name.split('.')[0]
+                    result = append_gifts_to_csv(df_to_export, file_name = file_name)
                 except Exception as e:
                     st.error(f"导出过程中出现错误: {str(e)}")
 
