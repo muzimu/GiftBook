@@ -44,7 +44,7 @@ def recognize(file_path: str, img: str) -> List[Gift]:
     
     # 然后调用 chat-completion, 获取 Kimi 的回答
     completion = client.chat.completions.create(
-        model="kimi-k2-0905-preview",
+        model=getenv('model'),
         messages=messages,
     )
     json_str = '[' + completion.choices[0].message.content.replace('\n', '').replace('}{', '},{')
